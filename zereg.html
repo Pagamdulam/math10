@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Бүхэл илтгэгчтэй зэрэг</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700&family=Noto+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Layout: top bar with three views; teacher view is a projected slide with a stage timer,
+     practice view is a level picker over a column of auto-checked items, notes view is one printable sheet. */
+  --paper:#f4f6f3; --surface:#ffffff; --ink:#1b2735; --muted:#5b6876; --line:#d6dcd8;
+  --accent:#0a5f8a; --accent-soft:#e3eff6; --exp:#c2410c;
+  --good:#2f7d3a; --good-soft:#e5f3e7; --bad:#b42323; --bad-soft:#fbe9e9;
+  --grid:rgba(10,95,138,.06);
+  --display:"Rubik","Noto Sans",system-ui,sans-serif;
+  --body:"Noto Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#121a22; --surface:#1a2530; --ink:#e7edf2; --muted:#9fb0bf; --line:#2c3a47;
+    --accent:#5fb3dd; --accent-soft:#183243; --exp:#fb923c;
+    --good:#6cc47a; --good-soft:#173123; --bad:#f07a7a; --bad-soft:#3a1c1e;
+    --grid:rgba(95,179,221,.06); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#121a22; --surface:#1a2530; --ink:#e7edf2; --muted:#9fb0bf; --line:#2c3a47;
+  --accent:#5fb3dd; --accent-soft:#183243; --exp:#fb923c;
+  --good:#6cc47a; --good-soft:#173123; --bad:#f07a7a; --bad-soft:#3a1c1e;
+  --grid:rgba(95,179,221,.06); color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.5;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.2;margin:0}
+.exp{color:var(--exp);font-weight:700}
+sup.exp{font-size:.62em;line-height:0;vertical-align:.55em;margin-left:.04em}
+.mono{font-variant-numeric:tabular-nums}
+
+/* top bar */
+.top{position:sticky;top:0;z-index:5;background:var(--surface);border-bottom:1px solid var(--line);
+  display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding:10px max(16px,3vw)}
+.brand{display:flex;flex-direction:column}
+.brand b{font-family:var(--display);font-size:18px}
+.brand span{font-size:13px;color:var(--muted)}
+.tabs{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+.tab{border:1px solid var(--line);background:transparent;border-radius:999px;padding:6px 14px;font-size:15px;text-decoration:none;color:var(--ink)}
+.tab[aria-current="page"]{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+main{max-width:1180px;margin:0 auto;padding:20px max(16px,3vw) 48px}
+.view{display:none}
+.view.on{display:block}
+
+/* teacher */
+.stagebar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+.stage{font-family:var(--display);font-size:15px;background:var(--accent-soft);color:var(--accent);border-radius:8px;padding:4px 10px}
+.timer{display:flex;align-items:center;gap:8px;margin-left:auto}
+.clock{font-family:var(--display);font-size:22px;font-variant-numeric:tabular-nums;min-width:4.2ch;text-align:right}
+.clock.over{color:var(--bad)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 14px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--surface);font-weight:600}
+.btn:disabled{opacity:.45;cursor:default}
+.slide{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:clamp(20px,4vw,48px);
+  min-height:min(64vh,620px);display:flex;flex-direction:column;gap:18px;font-size:clamp(18px,2.1vw,26px)}
+.slide h2{font-size:clamp(26px,3.4vw,44px)}
+.slide .kicker{font-size:.62em;color:var(--muted);font-family:var(--body);font-weight:600;letter-spacing:.02em}
+.slide .big{font-size:1.35em;font-variant-numeric:tabular-nums}
+.slide ul{margin:0;padding-left:1.1em;display:grid;gap:.35em}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.card{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--paper)}
+.card h3{font-size:.8em;margin-bottom:6px;color:var(--accent)}
+.rv{visibility:hidden}
+.rv.shown{visibility:visible;animation:pop .25s ease}
+@keyframes pop{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.rv.shown{animation:none}}
+.steps{display:grid;gap:.4em;font-variant-numeric:tabular-nums}
+.steps div{padding:.25em .6em;border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 6px 6px 0}
+.ans{color:var(--good);font-weight:700}
+.wrong{color:var(--bad);font-weight:700}
+table.pt{border-collapse:collapse;font-variant-numeric:tabular-nums;width:100%}
+table.pt th,table.pt td{border:1px solid var(--line);padding:.35em .5em;text-align:center}
+table.pt th{background:var(--accent-soft);font-family:var(--display);font-weight:500}
+.navrow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
+.dots{display:flex;gap:4px;flex-wrap:wrap;flex:1;justify-content:center}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--line);border:0;padding:0}
+.dot.cur{background:var(--accent)}
+.quote{border-left:5px solid var(--accent);padding:.4em 1em;font-style:italic;max-width:62ch}
+.calc{display:flex;flex-wrap:wrap;gap:10px;align-items:end;font-size:.8em}
+.calc label{display:grid;gap:4px;font-size:.8em;color:var(--muted)}
+.calc input{width:7em;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.calcout{font-variant-numeric:tabular-nums;font-size:1.05em}
+code{font-family:ui-monospace,Consolas,monospace;font-size:.9em;background:var(--accent-soft);padding:.05em .35em;border-radius:4px}
+.hintline{font-size:14px;color:var(--muted)}
+
+/* practice */
+.levels{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 16px}
+.lvl{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 12px;text-align:left;min-width:150px}
+.lvl b{display:block;font-family:var(--display);font-weight:500}
+.lvl small{color:var(--muted)}
+.lvl[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 2px var(--accent)}
+.meter{height:6px;background:var(--line);border-radius:3px;margin-top:6px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--good);width:0}
+.items{display:grid;gap:12px}
+.item{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;gap:10px}
+.item.ok{border-left-color:var(--good)}
+.item.no{border-left-color:var(--bad)}
+.q{font-size:19px;font-variant-numeric:tabular-nums}
+.q .n{color:var(--muted);margin-right:.4em}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.row input{flex:0 1 220px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+.opt{border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:7px 12px}
+.opt.right{background:var(--good-soft);border-color:var(--good)}
+.opt.bad{background:var(--bad-soft);border-color:var(--bad)}
+.fb{font-size:15px}
+.fb.good{color:var(--good)}
+.fb.badc{color:var(--bad)}
+.sol{font-size:15px;background:var(--accent-soft);border-radius:8px;padding:8px 10px;font-variant-numeric:tabular-nums}
+.link{background:none;border:0;color:var(--accent);text-decoration:underline;padding:0;font-size:15px}
+.help{font-size:14px;color:var(--muted);margin:0 0 10px}
+
+/* notes */
+.sheet{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:clamp(18px,3vw,36px);max-width:900px;margin:0 auto;display:grid;gap:18px}
+.sheet h2{font-size:26px}
+.sheet h3{font-size:18px;color:var(--accent);margin-bottom:6px}
+.sheet p{margin:0;max-width:68ch}
+.sheet ol,.sheet ul{margin:0;padding-left:1.2em;display:grid;gap:.25em}
+.box{border:2px solid var(--accent);border-radius:10px;padding:12px 16px;font-size:20px;font-variant-numeric:tabular-nums}
+@media print{
+  .top,.navrow,.stagebar{display:none}
+  body{background:#fff;color:#000}
+  .view{display:none!important}
+  #notes{display:block!important}
+  .sheet{border:0;padding:0}
+}
+@media (max-width:600px){
+  .tabs{margin-left:0}
+  .timer{margin-left:0}
+  .slide{min-height:auto}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><b>Бүхэл илтгэгчтэй зэрэг ба түүний чанар</b><span>Математик · 1-р курс · 10.1а · 80 минут</span></div>
+  <nav class="tabs" aria-label="Хэсгүүд">
+    <a class="tab" href="#teacher" data-view="teacher">Багшийн үзүүлэн</a>
+    <a class="tab" href="#practice" data-view="practice">Сурагчийн дасгал</a>
+    <a class="tab" href="#notes" data-view="notes">Товч тэмдэглэл</a>
+  </nav>
+</header>
+
+<main>
+<!-- ============ TEACHER ============ -->
+<section id="teacher" class="view" aria-label="Багшийн үзүүлэн">
+  <div class="stagebar">
+    <span class="stage" id="stageName">I. Зохион байгуулалт</span>
+    <span class="hintline">Сум товч, Space: дараагийн алхам</span>
+    <div class="timer">
+      <span class="clock" id="clock">2:00</span>
+      <button class="btn" id="timerBtn" type="button">Эхлүүлэх</button>
+      <button class="btn" id="timerReset" type="button">Дахин</button>
+    </div>
+  </div>
+  <div class="slide" id="slide" aria-live="polite"></div>
+  <div class="navrow">
+    <button class="btn" id="prev" type="button">← Өмнөх</button>
+    <div class="dots" id="dots"></div>
+    <button class="btn" id="full" type="button">Бүтэн дэлгэц</button>
+    <button class="btn primary" id="next" type="button">Дараах →</button>
+  </div>
+</section>
+
+<!-- ============ PRACTICE ============ -->
+<section id="practice" class="view" aria-label="Сурагчийн дасгал">
+  <h2 style="font-size:26px;margin-bottom:6px">Сурагчийн дасгал</h2>
+  <p class="help">Өөрийн түвшнээс эхэлж, дуусмагц дараагийн түвшин рүү ахина. Хариуг бутархай (1/8), аравтын бутархай (0,125) эсвэл 10^-5 хэлбэрээр бичиж болно.</p>
+  <div class="levels" id="levels"></div>
+  <div class="items" id="items"></div>
+</section>
+
+<!-- ============ NOTES ============ -->
+<section id="notes" class="view" aria-label="Товч тэмдэглэл">
+  <article class="sheet">
+    <div>
+      <h2>Бүхэл илтгэгчтэй зэрэг: товч тэмдэглэл</h2>
+      <p style="color:var(--muted)">10.1а · Хичээл тасалсан бол эндээс нөхөж уншаад, «Сурагчийн дасгал»-ын 0-Эхлэл, Суурь түвшнийг бод.</p>
+    </div>
+    <section>
+      <h3>1. Тодорхойлолт (a ≠ 0, n натурал тоо)</h3>
+      <div class="box">a<sup class="exp">0</sup> = 1 &nbsp;&nbsp;·&nbsp;&nbsp; a<sup class="exp">−n</sup> = 1 / a<sup class="exp">n</sup> &nbsp;&nbsp;·&nbsp;&nbsp; (a/b)<sup class="exp">−n</sup> = (b/a)<sup class="exp">n</sup></div>
+      <p style="margin-top:8px">Сөрөг илтгэгч нь сөрөг тоо биш, урвуу тоо гэсэн үг: 2⁻³ = 1/8. 0⁰ ба 0⁻ⁿ тодорхойлогдохгүй, учир нь 0-д хуваах болно.</p>
+    </section>
+    <section>
+      <h3>2. Зэргийн 5 чанар (m, n бүхэл тоо; a, b ≠ 0)</h3>
+      <table class="pt">
+        <thead><tr><th>Чанар</th><th>Жишээ</th></tr></thead>
+        <tbody>
+          <tr><td>aᵐ · aⁿ = aᵐ⁺ⁿ</td><td>2⁵ · 2⁻³ = 2² = 4</td></tr>
+          <tr><td>aᵐ : aⁿ = aᵐ⁻ⁿ</td><td>7⁵ : 7⁶ = 7⁻¹ = 1/7</td></tr>
+          <tr><td>(aᵐ)ⁿ = aᵐⁿ</td><td>(2⁻¹)³ = 2⁻³ = 1/8</td></tr>
+          <tr><td>(ab)ⁿ = aⁿbⁿ</td><td>(2x)⁻² = 1/(4x²)</td></tr>
+          <tr><td>(a/b)ⁿ = aⁿ/bⁿ</td><td>(2/5)⁻² = (5/2)² = 25/4</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <section>
+      <h3>3. Бодсон жишээ</h3>
+      <ol>
+        <li>2⁻³ + (3/4)⁻² − (−5)⁰ = 1/8 + 16/9 − 1 = 9/72 + 128/72 − 72/72 = <b>65/72</b></li>
+        <li>(9⁻² · 27³) : 3⁻² = (3⁻⁴ · 3⁹) : 3⁻² = 3⁵ : 3⁻² = 3⁷ = <b>2187</b></li>
+        <li>((3a⁻²b⁴) / (6a³b⁻¹))⁻² = (½ · a⁻⁵b⁵)⁻² = 2² · a¹⁰ · b⁻¹⁰ = <b>4a¹⁰ / b¹⁰</b></li>
+      </ol>
+    </section>
+    <section>
+      <h3>4. Түгээмэл алдаа</h3>
+      <ul>
+        <li>3⁻² = −9 гэж бичих. Зөв нь 3⁻² = 1/9.</li>
+        <li>−2⁴ ба (−2)⁴-ийг адилхан гэж үзэх. −2⁴ = −16, харин (−2)⁴ = 16.</li>
+        <li>(a + b)⁻¹ = a⁻¹ + b⁻¹ гэж бичих. Зөв нь (a + b)⁻¹ = 1/(a + b).</li>
+        <li>Ижил суурьтай зэргийг үржүүлэхдээ илтгэгчийг үржүүлэх. Илтгэгчийг нэмнэ: a² · a³ = a⁵.</li>
+      </ul>
+    </section>
+    <section>
+      <h3>5. Амьдрал дахь хэрэглээ</h3>
+      <ul>
+        <li>1 нм = 10⁻⁹ м, 1 мкм = 10⁻⁶ м, 1 мм = 10⁻³ м.</li>
+        <li>Улаан эс 7 · 10⁻⁶ м, томуугийн вирус 7 · 10⁻⁸ м: улаан эс 10² = 100 дахин том.</li>
+        <li>1 КБ = 2¹⁰ байт, 1 МБ = 2²⁰ байт, 1 ГБ = 2³⁰ байт. C++ дээр <code>pow(2, -3)</code> = 0.125.</li>
+      </ul>
+    </section>
+  </article>
+</section>
+</main>
+
+<script>
+(function(){
+"use strict";
+/* ---------- tiny storage ---------- */
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+
+/* ---------- views ---------- */
+const views=["teacher","practice","notes"];
+function showView(){
+  let v=(location.hash||"#teacher").slice(1);
+  if(!views.includes(v)) v="teacher";
+  views.forEach(n=>document.getElementById(n).classList.toggle("on",n===v));
+  document.querySelectorAll(".tab").forEach(t=>{
+    if(t.dataset.view===v) t.setAttribute("aria-current","page"); else t.removeAttribute("aria-current");});
+}
+window.addEventListener("hashchange",showView);
+
+/* ---------- exact fractions (BigInt) ---------- */
+function gcd(a,b){a=a<0n?-a:a;b=b<0n?-b:b;while(b){[a,b]=[b,a%b]}return a}
+function frac(n,d){if(d===0n) return null; if(d<0n){n=-n;d=-d} const g=gcd(n,d)||1n; return {n:n/g,d:d/g}}
+function parseFrac(s){
+  s=s.trim().replace(/−/g,"-").replace(",",".");
+  let m=s.match(/^(-?\d+)\s*\/\s*(-?\d+)$/); if(m) return frac(BigInt(m[1]),BigInt(m[2]));
+  m=s.match(/^(-?)(\d*)\.(\d+)$/); if(m){const den=10n**BigInt(m[3].length); return frac(BigInt(m[1]+(m[2]||"0")+m[3]),den)}
+  m=s.match(/^-?\d+$/); if(m) return frac(BigInt(s),1n);
+  return null;
+}
+function fpow(f,e){
+  if(e===0) return f.n===0n?null:{n:1n,d:1n};
+  let b=e<0?(f.n===0n?null:frac(f.d,f.n)):f; if(!b) return null;
+  const k=BigInt(Math.abs(e)); return frac(b.n**k,b.d**k);
+}
+function fstr(f){return f.d===1n?f.n.toString():`${f.n}/${f.d}`}
+
+/* ---------- answer parser: numbers, + - * / ( ) and 10^k only ---------- */
+const SUP={"⁰":"0","¹":"1","²":"2","³":"3","⁴":"4","⁵":"5","⁶":"6","⁷":"7","⁸":"8","⁹":"9","⁻":"-"};
+function normalize(s){
+  s=s.trim().toLowerCase().replace(/\s+/g,"");
+  s=s.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹⁻]+/g,m=>"^"+m.split("").map(c=>SUP[c]).join(""));
+  s=s.replace(/−|–/g,"-").replace(/[·×x∙]/g,"*").replace(/:/g,"/").replace(/,/g,".");
+  return s;
+}
+function evalAnswer(raw){
+  let s=normalize(raw); if(!s) return null;
+  if(/e/.test(s)){const v=Number(s);return isFinite(v)?v:null}
+  // only 10 may be raised to a power
+  const pw=s.match(/(\d+(?:\.\d+)?)\^/g)||[];
+  if(pw.some(p=>p!=="10^")) return "pow";
+  let i=0;
+  function num(){const m=s.slice(i).match(/^\d+(?:\.\d+)?/); if(!m) throw 0; i+=m[0].length; return parseFloat(m[0])}
+  function atom(){
+    if(s[i]==="-"){i++;return -atom()}
+    if(s[i]==="+"){i++;return atom()}
+    let v; if(s[i]==="("){i++;v=expr();if(s[i]!==")")throw 0;i++} else v=num();
+    if(s[i]==="^"){i++;let sign=1;if(s[i]==="-"){sign=-1;i++}else if(s[i]==="+"){i++} const e=num()*sign; v=Math.pow(v,e)}
+    return v;
+  }
+  function term(){let v=atom();while(s[i]==="*"||s[i]==="/"){const op=s[i++];const r=atom();v=op==="*"?v*r:v/r}return v}
+  function expr(){let v=term();while(s[i]==="+"||s[i]==="-"){const op=s[i++];const r=term();v=op==="+"?v+r:v-r}return v}
+  try{const v=expr(); if(i!==s.length) return null; return isFinite(v)?v:null}catch(e){return null}
+}
+function same(a,b){return Math.abs(a-b)<=1e-9*Math.abs(b)||Math.abs(a-b)<1e-15}
+
+/* ---------- slides ---------- */
+const STAGES={I:["I. Зохион байгуулалт",2],II:["II. Ёс зүйн 1 минут",1],III:["III. Өмнөх мэдлэг сэргээх, оношлох",7],
+  IV:["IV. Сэдэлжүүлэх",6],V:["V. Шинэ мэдлэг олгох",26],VI:["VI. Бататгах",28],VII:["VII. Дүгнэлт, үнэлгээ",10]};
+const E=(t)=>`<sup class="exp">${t}</sup>`;
+const slides=[
+ {st:"I",html:`<span class="kicker">10.1а · Хичээл №1</span>
+   <h2>Бүхэл илтгэгчтэй зэрэг ба түүний чанар, хэрэглээ</h2>
+   <div class="card"><h3>Өнөөдрийн амжилтын шалгуур</h3><ul>
+   <li>Би 2${E("−3")}, 5${E("0")} зэрэг зэргийн утгыг олж чадна.</li>
+   <li>Би зэргийн чанараар илэрхийлэл хялбарчилж чадна.</li>
+   <li>Би сөрөг илтгэгчтэй зэргийн нэг амьдралын жишээ хэлж чадна.</li></ul></div>`},
+ {st:"II",html:`<span class="kicker">Ёс зүйн 1 минут</span><h2>Шинжлэх ухаанч үнэнч шударга байдал ба нягт нямбай хандлага</h2>
+   <p class="quote">Математикт ганц хасах тэмдэг эсвэл нэг илтгэгч орхигдоход бүх бодлогын хариу өөрчлөгддөг. Алхам бүрийг тэвчээртэй, нямбай гүйцэтгэж, бусдын бодолтыг хуулах бус хамтдаа ярилцан ойлголцож ажиллаарай.</p>`},
+ {st:"III",html:`<span class="kicker">Оношилгоо · 4 минут · дэвтэртээ бие даан бод</span><h2>Натурал илтгэгчтэй зэргийг санаж байна уу?</h2>
+   <div class="cols big">
+    <div class="card">2${E("3")} · 2${E("2")} = <span class="rv ans">2${E("5")} = 32</span></div>
+    <div class="card">5${E("4")} : 5${E("2")} = <span class="rv ans">5${E("2")} = 25</span></div>
+    <div class="card">(3${E("2")})${E("3")} = <span class="rv ans">3${E("6")} = 729</span></div></div>
+   <p class="rv">Дүрэм: aᵐ · aⁿ = aᵐ⁺ⁿ, &nbsp; aᵐ : aⁿ = aᵐ⁻ⁿ, &nbsp; (aᵐ)ⁿ = aᵐⁿ</p>`},
+ {st:"III",html:`<span class="kicker">Асуудал үүсгэх асуулт · 3 минут</span><h2>Илтгэгч 0 эсвэл сөрөг болбол юу болох вэ?</h2>
+   <div class="cols">
+    <div class="card"><h3>m = n үед</h3><div class="steps"><div>a${E("3")} : a${E("3")} = a${E("3−3")} = a${E("0")}</div>
+      <div class="rv">Нөгөө талаас a${E("3")} : a${E("3")} = 1</div><div class="rv ans">Тэгэхээр a${E("0")} = 1</div></div></div>
+    <div class="card"><h3>m &lt; n үед</h3><div class="steps"><div>a${E("2")} : a${E("5")} = a${E("2−5")} = a${E("−3")}</div>
+      <div class="rv">Хураавал (a·a) / (a·a·a·a·a) = 1 / a${E("3")}</div><div class="rv ans">Тэгэхээр a${E("−3")} = 1 / a${E("3")}</div></div></div></div>`},
+ {st:"IV",html:`<span class="kicker">Бодит амьдралын жишээ</span><h2>Улаан эс вирусээс хэд дахин том бэ?</h2>
+   <p>Нанотехнологи, анагаах ухаанд бичил биетийг 1 нм = 10${E("−9")} м гэх мэт сөрөг зэргээр хэмждэг.</p>
+   <div class="cols"><div class="card"><h3>Цусны улаан эс</h3><span class="big">7 · 10${E("−6")} м</span></div>
+   <div class="card"><h3>Томуугийн вирус</h3><span class="big">7 · 10${E("−8")} м</span></div></div>
+   <div class="steps big"><div class="rv">(7 · 10${E("−6")}) : (7 · 10${E("−8")}) = 10${E("−6−(−8)")} = 10${E("2")}</div><div class="rv ans">= 100 дахин том</div></div>`},
+ {st:"IV",html:`<span class="kicker">Зүй тогтлыг ажигла · 2 минут</span><h2>Илтгэгч 1-ээр буурахад утга яах вэ?</h2>
+   <table class="pt big"><thead><tr><th>2${E("3")}</th><th>2${E("2")}</th><th>2${E("1")}</th><th>2${E("0")}</th><th>2${E("−1")}</th><th>2${E("−2")}</th><th>2${E("−3")}</th></tr></thead>
+   <tbody><tr><td>8</td><td>4</td><td>2</td><td class="rv ans">1</td><td class="rv ans">1/2</td><td class="rv ans">1/4</td><td class="rv ans">1/8</td></tr></tbody></table>
+   <p>Зүүнээс баруун тийш алхам бүрт <b>2-т хуваагдаж</b> байна. Цаас нугалах туршилт: 1 нугалахад нэг хэсэг нь бүтнийхээ 1/2, 2 нугалахад 1/4.</p>`},
+ {st:"V",html:`<span class="kicker">Тодорхойлолт</span><h2>Тэг ба сөрөг бүхэл илтгэгчтэй зэрэг</h2>
+   <div class="cols big"><div class="card">a${E("0")} = 1</div><div class="card">a${E("−n")} = 1 / a${E("n")}</div><div class="card">(a/b)${E("−n")} = (b/a)${E("n")}</div></div>
+   <p>Нөхцөл: a ≠ 0, b ≠ 0, n натурал тоо.</p>
+   <p class="rv">Яагаад a ≠ 0 вэ? 0${E("−1")} = 1/0 болох ба 0-д хуваах боломжгүй.</p>`},
+ {st:"V",html:`<span class="kicker">m, n бүхэл тоо</span><h2>Бүхэл илтгэгчтэй зэргийн 5 чанар</h2>
+   <table class="pt"><thead><tr><th>Чанар</th><th>Жишээ</th></tr></thead><tbody>
+   <tr><td>aᵐ · aⁿ = aᵐ⁺ⁿ</td><td class="rv">2${E("5")} · 2${E("−3")} = 2${E("2")} = 4</td></tr>
+   <tr><td>aᵐ : aⁿ = aᵐ⁻ⁿ</td><td class="rv">7${E("5")} : 7${E("6")} = 7${E("−1")} = 1/7</td></tr>
+   <tr><td>(aᵐ)ⁿ = aᵐⁿ</td><td class="rv">(2${E("−1")})${E("3")} = 2${E("−3")} = 1/8</td></tr>
+   <tr><td>(ab)ⁿ = aⁿbⁿ</td><td class="rv">(2x)${E("−2")} = 2${E("−2")}x${E("−2")} = 1/(4x²)</td></tr>
+   <tr><td>(a/b)ⁿ = aⁿ/bⁿ</td><td class="rv">(2/5)${E("−2")} = (5/2)${E("2")} = 25/4</td></tr></tbody></table>`},
+ {st:"V",html:`<span class="kicker">Үнэн үү, худал уу? Хосоороо ярилц</span><h2>Түгээмэл алдаа</h2>
+   <div class="cols">
+    <div class="card"><div class="big">3${E("−2")} = −9</div><p class="rv"><span class="wrong">Буруу.</span> 3${E("−2")} = 1/9</p></div>
+    <div class="card"><div class="big">−2${E("4")} = (−2)${E("4")}</div><p class="rv"><span class="wrong">Буруу.</span> −2${E("4")} = −16, (−2)${E("4")} = 16</p></div>
+    <div class="card"><div class="big">(a + b)${E("−1")} = a${E("−1")} + b${E("−1")}</div><p class="rv"><span class="wrong">Буруу.</span> (a + b)${E("−1")} = 1/(a + b)</p></div></div>`},
+ {st:"V",html:`<span class="kicker">Жишээ 1 · багш бодно</span><h2>2${E("−3")} + (3/4)${E("−2")} − (−5)${E("0")}</h2>
+   <div class="steps big"><div class="rv">= 1/8 + 16/9 − 1</div><div class="rv">= 9/72 + 128/72 − 72/72</div><div class="rv ans">= 65/72</div></div>`},
+ {st:"V",html:`<span class="kicker">Жишээ 2 · анги хамтдаа</span><h2>(9${E("−2")} · 27${E("3")}) : 3${E("−2")}</h2>
+   <div class="steps big"><div class="rv">= (3${E("−4")} · 3${E("9")}) : 3${E("−2")}</div><div class="rv">= 3${E("5")} : 3${E("−2")} = 3${E("5−(−2)")}</div><div class="rv ans">= 3${E("7")} = 2187</div></div>`},
+ {st:"V",html:`<span class="kicker">Жишээ 3 · хосоороо бодоод тулга</span><h2>((3a${E("−2")}b${E("4")}) / (6a${E("3")}b${E("−1")}))${E("−2")}</h2>
+   <div class="steps big"><div class="rv">= (½ · a${E("−5")} · b${E("5")})${E("−2")}</div><div class="rv">= 2${E("2")} · a${E("10")} · b${E("−10")}</div><div class="rv ans">= 4a${E("10")} / b${E("10")}</div></div>
+   <div class="card rv"><h3>Хурдан дууссан бол</h3>(4${E("n+1")} − 4${E("n")}) / (4${E("n+2")} + 4${E("n")}) = <span class="ans">4${E("n")}·3 / (4${E("n")}·17) = 3/17</span></div>`},
+ {st:"V",html:`<span class="kicker">Шалгах цэг · 2 минут · дэвтэр дээрээ бичээд өргө</span><h2>Гурван хурдан асуулт</h2>
+   <div class="cols big"><div class="card">5${E("0")} = <span class="rv ans">1</span></div><div class="card">4${E("−1")} = <span class="rv ans">1/4</span></div><div class="card">(1/3)${E("−2")} = <span class="rv ans">9</span></div></div>
+   <p>2-оос дээш алдсан сурагчийг тэмдэглэж, бататгах үе шатанд түрүүлж оч.</p>`},
+ {st:"V",html:`<span class="kicker">Мэргэжлийн холбоо</span><h2>Компьютер ч сөрөг зэрэг ашигладаг</h2>
+   <div class="cols"><div class="card"><h3>Санах ой</h3>1 КБ = 2${E("10")} байт = 1024 байт<br>1 байт = 2${E("−10")} КБ</div>
+   <div class="card"><h3>C++</h3><code>pow(2, -3)</code> → 0.125<br><code>1 / 8</code> → 0 (бүхэл тоон хуваалт)</div></div>
+   <div class="calc" id="calc"><label for="cb">Суурь (a эсвэл a/b)<input id="cb" value="2"></label>
+     <label for="ce">Илтгэгч (бүхэл тоо)<input id="ce" value="-3" inputmode="numeric"></label>
+     <div class="calcout" id="co"></div></div>`},
+ {st:"VI",html:`<span class="kicker">Бататгах · 28 минут</span><h2>Түвшинтэй дасгал</h2>
+   <div class="cols">
+    <div class="card"><h3>Эхний 8 минут</h3>Бүгд «0-Эхлэл» түвшний 5 бодлогыг бодно.</div>
+    <div class="card"><h3>Дараа нь</h3>В бүлэг → Суурь, Б бүлэг → Дунд, А бүлэг → Ахисан. Дуусмагц ахина.</div>
+    <div class="card"><h3>Хэрэглээ</h3>Бүх бүлэг: транзистор, бактер, санах ойн бодлого.</div></div>
+   <p>Компьютер, утсаар: «Сурагчийн дасгал» хэсэг. Цаасаар: ажлын хуудас. А бүлгийнхэн дуусгаад бусдадаа тусална.</p>`},
+ {st:"VII",html:`<span class="kicker">Түргэн сорил · 5 минут · зөв хариултыг дугуйл</span><h2>Гарах тасалбар</h2>
+   <ol style="display:grid;gap:.5em;font-size:.85em">
+    <li>(−2)${E("−3")} + 2${E("−2")} = ? &nbsp; А) −3/8 &nbsp; Б) 1/8 &nbsp; В) −1/8 &nbsp; Г) 3/8 <span class="rv ans">→ Б</span></li>
+    <li>((x${E("−4")})${E("3")} · x${E("15")}) / x${E("2")} = ? &nbsp; А) x &nbsp; Б) x${E("5")} &nbsp; В) x${E("−1")} &nbsp; Г) 1 <span class="rv ans">→ А</span></li>
+    <li>Аль нь БУРУУ вэ? &nbsp; А) 4${E("−2")} = 1/16 &nbsp; Б) (−3)${E("0")} = 1 &nbsp; В) (a + b)${E("−1")} = a${E("−1")} + b${E("−1")} &nbsp; Г) (2/3)${E("−2")} = 9/4 <span class="rv ans">→ В</span></li>
+    <li>(2${E("−1")} − 3${E("−1")})${E("−1")} = ? &nbsp; А) 1 &nbsp; Б) −1 &nbsp; В) 1/6 &nbsp; Г) 6 <span class="rv ans">→ Г</span></li></ol>`},
+ {st:"VII",html:`<span class="kicker">Дүгнэлт</span><h2>Өнөөдөр юу сурсан бэ?</h2>
+   <div class="cols"><div class="card"><h3>Өөрийгөө үнэл</h3><ul><li>Зэргийн утгыг олж чадна</li><li>Чанараар хялбарчилж чадна</li><li>Амьдралын жишээ хэлж чадна</li></ul></div>
+   <div class="card"><h3>Гэрийн даалгавар</h3><ul><li>В бүлэг: 1, 2 + Математик X №9, №12</li><li>Б бүлэг: 1–4 + үндсэн даалгавар</li><li>А бүлэг: 1–4 + үндсэн, гүнзгийрүүлэх</li></ul></div></div>
+   <p>Хичээлд хамгийн чухал байсан чанар аль нь вэ? Нэг өгүүлбэрээр хариул.</p>`}
+];
+
+let cur=0, step=0;
+const slideEl=document.getElementById("slide"), dotsEl=document.getElementById("dots");
+slides.forEach((s,i)=>{const b=document.createElement("button");b.className="dot";b.type="button";
+  b.setAttribute("aria-label",`Слайд ${i+1}`);b.addEventListener("click",()=>go(i));dotsEl.appendChild(b)});
+function rvs(){return slideEl.querySelectorAll(".rv")}
+function render(){
+  const s=slides[cur];
+  slideEl.innerHTML=s.html; step=0;
+  dotsEl.querySelectorAll(".dot").forEach((d,i)=>d.classList.toggle("cur",i===cur));
+  document.getElementById("prev").disabled=cur===0;
+  setStage(s.st);
+  updNext();
+  if(slideEl.querySelector("#calc")) initCalc();
+}
+function updNext(){
+  const left=rvs().length-step;
+  const nb=document.getElementById("next");
+  nb.textContent=left>0?"Дараагийн алхам ↓":"Дараах →";
+  nb.disabled=left<=0&&cur===slides.length-1;
+}
+function advance(){
+  const r=rvs();
+  if(step<r.length){r[step].classList.add("shown");step++;updNext();return}
+  if(cur<slides.length-1) go(cur+1);
+}
+function go(i){cur=Math.max(0,Math.min(slides.length-1,i));render();store.set("zereg-slide",cur)}
+document.getElementById("next").addEventListener("click",advance);
+document.getElementById("prev").addEventListener("click",()=>go(cur-1));
+document.addEventListener("keydown",e=>{
+  if(!document.getElementById("teacher").classList.contains("on")) return;
+  if(e.target.tagName==="INPUT") return;
+  if(e.key==="ArrowRight"||e.key===" "||e.key==="PageDown"){e.preventDefault();advance()}
+  if(e.key==="ArrowLeft"||e.key==="PageUp"){e.preventDefault();go(cur-1)}
+});
+document.getElementById("full").addEventListener("click",()=>{
+  const el=document.getElementById("teacher");
+  try{ if(document.fullscreenElement) document.exitFullscreen(); else el.requestFullscreen().catch(()=>{}) }catch(e){}
+});
+
+/* timer */
+let stageKey=null, remain=0, ticking=null;
+const clock=document.getElementById("clock"), tbtn=document.getElementById("timerBtn");
+function fmt(sec){const neg=sec<0;sec=Math.abs(sec);return (neg?"−":"")+Math.floor(sec/60)+":"+String(sec%60).padStart(2,"0")}
+function paint(){clock.textContent=fmt(remain);clock.classList.toggle("over",remain<0)}
+function setStage(k){
+  document.getElementById("stageName").textContent=STAGES[k][0]+" · "+STAGES[k][1]+" мин";
+  if(k!==stageKey){stageKey=k;remain=STAGES[k][1]*60;paint()}
+}
+tbtn.addEventListener("click",()=>{
+  if(ticking){clearInterval(ticking);ticking=null;tbtn.textContent="Үргэлжлүүлэх"}
+  else{ticking=setInterval(()=>{remain--;paint()},1000);tbtn.textContent="Зогсоох"}
+});
+document.getElementById("timerReset").addEventListener("click",()=>{remain=STAGES[stageKey][1]*60;paint()});
+
+/* power calculator */
+function initCalc(){
+  const b=document.getElementById("cb"), e=document.getElementById("ce"), o=document.getElementById("co");
+  function upd(){
+    const f=parseFrac(b.value), n=parseInt(e.value,10);
+    if(!f||!/^\s*-?\d+\s*$/.test(e.value)||Math.abs(n)>30){o.innerHTML='<span class="wrong">Суурийг 2, -3, 1/2 гэх мэтээр, илтгэгчийг −30…30 бүхэл тоогоор бич.</span>';return}
+    const r=fpow(f,n);
+    if(!r){o.innerHTML='<span class="wrong">0-ийн 0 ба сөрөг зэрэг тодорхойлогдохгүй (0-д хуваах болно).</span>';return}
+    const dec=Number(r.n)/Number(r.d);
+    o.innerHTML=`(${fstr(f)})<sup class="exp">${n}</sup> = <b>${fstr(r)}</b> ≈ ${dec.toPrecision(6).replace(/\.?0+$/,"").replace(/\.?0+e/,"e")} &nbsp; <code>pow(${f.d===1n?f.n+"":f.n+".0/"+f.d}, ${n})</code>`;
+  }
+  b.addEventListener("input",upd); e.addEventListener("input",upd); upd();
+}
+
+/* ---------- practice ---------- */
+const L=[
+ {id:"l0",name:"0-Эхлэл",who:"Бүх сурагч эхэлнэ",items:[
+  {q:"5⁰",a:1,h:"Тэгээс ялгаатай тооны 0 зэрэг үргэлж 1.",s:"5⁰ = 1"},
+  {q:"2⁻³",a:1/8,h:"a⁻ⁿ = 1/aⁿ",s:"2⁻³ = 1/2³ = 1/8"},
+  {q:"10⁻² (аравтын бутархайгаар)",a:0.01,h:"10⁻² = 1/10²",s:"1/100 = 0,01"},
+  {q:"3⁴ · 3⁻²",a:9,h:"Ижил суурьтай зэргийг үржүүлэхэд илтгэгчийг нэмнэ.",s:"3⁴⁺⁽⁻²⁾ = 3² = 9"},
+  {q:"(1/2)⁻¹",a:2,h:"(a/b)⁻ⁿ = (b/a)ⁿ",s:"(1/2)⁻¹ = (2/1)¹ = 2"}]},
+ {id:"l1",name:"Суурь",who:"В бүлэг",items:[
+  {q:"4⁻¹",a:1/4,h:"a⁻¹ = 1/a",s:"4⁻¹ = 1/4"},
+  {q:"7⁵ : 7⁶",a:1/7,h:"Хуваахад илтгэгчийг хасна.",s:"7⁵⁻⁶ = 7⁻¹ = 1/7"},
+  {q:"(2⁻¹)³",a:1/8,h:"Зэргийг зэрэгт дэвшүүлэхэд илтгэгчийг үржүүлнэ.",s:"2⁻¹·³ = 2⁻³ = 1/8"},
+  {q:"9⁻¹ · 27",a:3,h:"9 = 3², 27 = 3³ гэж ижил суурьт шилжүүл.",s:"3⁻² · 3³ = 3¹ = 3"},
+  {q:"(2/5)⁻² − 4⁻¹ + 2026⁰",a:7,h:"Гишүүн бүрийг тусад нь ол: (5/2)², 1/4, 1.",s:"25/4 − 1/4 + 1 = 24/4 + 1 = 6 + 1 = 7"}]},
+ {id:"l2",name:"Дунд",who:"Б бүлэг",items:[
+  {q:"(3/4)⁻²",a:16/9,h:"Бутархайг эргүүлээд квадрат зэрэгт дэвшүүл.",s:"(4/3)² = 16/9"},
+  {q:"2⁻³ · 4²",a:2,h:"4² = (2²)² = 2⁴",s:"2⁻³ · 2⁴ = 2¹ = 2"},
+  {q:"(0,5)⁻³",a:8,h:"0,5 = 1/2",s:"(1/2)⁻³ = 2³ = 8"},
+  {q:"(8⁻² · 16³) : (4⁻¹ · 2⁴)",a:16,h:"Бүгдийг 2-ын зэрэгт шилжүүл: 8 = 2³, 16 = 2⁴, 4 = 2².",s:"(2⁻⁶ · 2¹²) : (2⁻² · 2⁴) = 2⁶ : 2² = 2⁴ = 16"},
+  {q:"2⁻¹ + 2⁻² + 2⁻³",a:7/8,h:"1/2 + 1/4 + 1/8-ийг ерөнхий хуваарь 8-д оруул.",s:"4/8 + 2/8 + 1/8 = 7/8"}]},
+ {id:"l3",name:"Ахисан",who:"А бүлэг",items:[
+  {q:"(2⁻³ · 8²) : 4⁻¹",a:32,h:"8² = 2⁶, 4⁻¹ = 2⁻²",s:"2⁻³ · 2⁶ : 2⁻² = 2⁻³⁺⁶⁺² = 2⁵ = 32"},
+  {q:"(4ⁿ⁺¹ − 4ⁿ) : (4ⁿ⁺² + 4ⁿ)",a:3/17,h:"Хүртвэр, хуваарийн аль алинаас 4ⁿ-ийг хаалтнаас гарга.",s:"4ⁿ(4 − 1) / 4ⁿ(16 + 1) = 3/17"},
+  {q:"(a⁻¹ − b⁻¹) : (a⁻² − b⁻²)-ийг хялбарчил",opts:["ab / (a + b)","(a + b) / ab","ab / (b − a)","a + b"],c:0,
+   s:"((b − a)/ab) : ((b − a)(b + a)/a²b²) = ab / (a + b)"},
+  {q:"(a⁻²b³)⁻¹ · (a³b⁻²)²",opts:["a⁸ / b⁷","a⁴ / b","a⁸b⁷","b⁷ / a⁸"],c:0,s:"a²b⁻³ · a⁶b⁻⁴ = a⁸b⁻⁷ = a⁸ / b⁷"},
+  {q:"(−2)⁻² ба −2⁻²: аль нь зөв бэ?",opts:["(−2)⁻² = 1/4, −2⁻² = −1/4","Хоёулаа 1/4","Хоёулаа −1/4","(−2)⁻² = −4"],c:0,
+   s:"(−2)⁻² = 1/(−2)² = 1/4; −2⁻² = −(1/2²) = −1/4"}]},
+ {id:"l4",name:"Хэрэглээ",who:"Бүх бүлэг",items:[
+  {q:"Транзистор 5 · 10⁻⁹ м, хүний үсний голч 5 · 10⁻⁵ м. Үс транзистороос хэд дахин өргөн бэ?",a:10000,h:"Хоёр хэмжээг хуваа: 10⁻⁵ : 10⁻⁹.",s:"10⁻⁵⁻⁽⁻⁹⁾ = 10⁴ = 10 000 дахин"},
+  {q:"Транзисторын хэмжээ 5 · 10⁻⁹ м-ийг миллиметрээр илэрхийл (1 м = 10³ мм).",opts:["5 · 10⁻⁶ мм","5 · 10⁻¹² мм","5 · 10⁻⁹ мм","5 · 10³ мм"],c:0,s:"5 · 10⁻⁹ · 10³ = 5 · 10⁻⁶ мм"},
+  {q:"Нэг бактерийн масс 2 · 10⁻¹² г. 5 · 10⁶ бактерийн нийт масс хэдэн грамм вэ?",a:1e-5,h:"2 · 5 = 10, 10⁻¹² · 10⁶ = 10⁻⁶",s:"10 · 10⁻⁶ = 10⁻⁵ г = 0,00001 г"},
+  {q:"1 ГБ = 2³⁰ байт, 1 МБ = 2²⁰ байт. 1 ГБ хэдэн МБ вэ?",a:1024,h:"2³⁰ : 2²⁰",s:"2³⁰⁻²⁰ = 2¹⁰ = 1024 МБ"},
+  {q:"Улаан эс 7 · 10⁻⁶ м, томуугийн вирус 7 · 10⁻⁸ м. Улаан эс хэд дахин том бэ?",a:100,h:"10⁻⁶ : 10⁻⁸",s:"10⁻⁶⁻⁽⁻⁸⁾ = 10² = 100"}]},
+ {id:"l5",name:"Гарах тасалбар",who:"Хичээлийн төгсгөлд",items:[
+  {q:"(−2)⁻³ + 2⁻²",opts:["−3/8","1/8","−1/8","3/8"],c:1,s:"−1/8 + 1/4 = 1/8"},
+  {q:"((x⁻⁴)³ · x¹⁵) / x²",opts:["x","x⁵","x⁻¹","1"],c:0,s:"x⁻¹² · x¹⁵ : x² = x³ : x² = x"},
+  {q:"Аль тэнцэтгэл БУРУУ вэ?",opts:["4⁻² = 1/16","(−3)⁰ = 1","(a + b)⁻¹ = a⁻¹ + b⁻¹","(2/3)⁻² = 9/4"],c:2,s:"(a + b)⁻¹ = 1/(a + b)"},
+  {q:"(2⁻¹ − 3⁻¹)⁻¹",opts:["1","−1","1/6","6"],c:3,s:"(1/2 − 1/3)⁻¹ = (1/6)⁻¹ = 6"}]}
+];
+let done=store.get("zereg-done",{});
+let curL=store.get("zereg-level","l0");
+const levelsEl=document.getElementById("levels"), itemsEl=document.getElementById("items");
+function key(l,i){return l+"-"+i}
+function paintLevels(){
+  levelsEl.innerHTML="";
+  L.forEach(l=>{
+    const n=l.items.filter((_,i)=>done[key(l.id,i)]).length;
+    const b=document.createElement("button");b.type="button";b.className="lvl";b.setAttribute("aria-pressed",String(l.id===curL));
+    b.innerHTML=`<b>${l.name}</b><small>${l.who} · ${n}/${l.items.length}</small><div class="meter"><i style="width:${100*n/l.items.length}%"></i></div>`;
+    b.addEventListener("click",()=>{curL=l.id;store.set("zereg-level",curL);paintLevels();paintItems()});
+    levelsEl.appendChild(b);
+  });
+}
+function paintItems(){
+  const l=L.find(x=>x.id===curL); itemsEl.innerHTML="";
+  l.items.forEach((it,i)=>{
+    const k=key(l.id,i), box=document.createElement("div"); box.className="item"+(done[k]?" ok":"");
+    let tries=0;
+    box.innerHTML=`<div class="q"><span class="n">${i+1}.</span>${it.q}</div>`;
+    const fb=document.createElement("div"); fb.className="fb"; fb.setAttribute("aria-live","polite");
+    const sol=document.createElement("div"); sol.className="sol"; sol.hidden=true; sol.textContent="Бодолт: "+it.s;
+    const solBtn=document.createElement("button"); solBtn.type="button"; solBtn.className="link"; solBtn.textContent="Бодолтыг харах"; solBtn.hidden=true;
+    solBtn.addEventListener("click",()=>{sol.hidden=false;solBtn.hidden=true});
+    function result(ok){
+      if(ok){done[k]=true;store.set("zereg-done",done);box.className="item ok";fb.className="fb good";fb.textContent="Зөв!";sol.hidden=false;solBtn.hidden=true;paintLevels()}
+      else{tries++;box.className="item no";fb.className="fb badc";
+        fb.textContent=tries===1&&it.h?"Дахин оролдоорой. Сануулга: "+it.h:"Дахин оролдоорой.";
+        if(tries>=2) solBtn.hidden=false;}
+    }
+    if(it.opts){
+      const row=document.createElement("div"); row.className="row";
+      it.opts.forEach((o,j)=>{const b=document.createElement("button");b.type="button";b.className="opt";b.textContent=["А","Б","В","Г"][j]+") "+o;
+        b.addEventListener("click",()=>{if(j===it.c){b.classList.add("right");result(true)}else{b.classList.add("bad");result(false)}});row.appendChild(b)});
+      box.appendChild(row);
+    }else{
+      const row=document.createElement("form"); row.className="row";
+      const id="in-"+k;
+      row.innerHTML=`<label for="${id}" class="hintline">Хариу:</label><input id="${id}" autocomplete="off" inputmode="text"><button class="btn primary" type="submit">Шалгах</button>`;
+      row.addEventListener("submit",ev=>{ev.preventDefault();
+        const v=evalAnswer(row.querySelector("input").value);
+        if(v==="pow"){fb.className="fb badc";fb.textContent="Зэргийн утгыг тооцоолж бич (зөвхөн 10^k хэлбэр зөвшөөрнө).";return}
+        if(v===null){fb.className="fb badc";fb.textContent="Хариугаа 7, 1/8, 0,125 эсвэл 10^-5 хэлбэрээр бич.";return}
+        result(same(v,it.a));});
+      box.appendChild(row);
+    }
+    box.appendChild(fb); box.appendChild(solBtn); box.appendChild(sol);
+    if(done[k]){fb.className="fb good";fb.textContent="Өмнө нь зөв бодсон.";sol.hidden=false}
+    itemsEl.appendChild(box);
+  });
+  const reset=document.createElement("button");reset.type="button";reset.className="link";reset.textContent="Энэ түвшнийг дахин эхлүүлэх";
+  reset.addEventListener("click",()=>{l.items.forEach((_,i)=>delete done[key(l.id,i)]);store.set("zereg-done",done);paintLevels();paintItems()});
+  itemsEl.appendChild(reset);
+}
+
+/* ---------- start ---------- */
+cur=Math.min(store.get("zereg-slide",0),slides.length-1);
+render(); paintLevels(); paintItems(); showView();
+})();
+</script>
+</body>
+</html>
