@@ -315,19 +315,32 @@ details.card summary{cursor:pointer}
 .slide h2{font-size:1.5em;margin-top:0}.slide .rv{display:none}.slide.show .rv{display:block}
 .rvbox{border-left:3px solid var(--ok);padding:2px 14px;margin-top:6px;color:var(--ok)}
 /* ---- өнгөт загвар ---- */
+.mw{max-width:900px;margin:0 auto;padding:0 20px}
+.mh{background:#1e3a5f;color:#fff;border-bottom:4px solid #e0a930}
+.mh .mw{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;padding-top:22px;padding-bottom:16px}
+.mh small{display:block;font-size:13px;color:#c9d4e2}
+.mt{display:block;font-size:28px;font-weight:800;color:#fff!important;text-decoration:none;line-height:1.25}
+.mh .moto{margin-left:auto;font-style:italic;color:#e0a930;font-size:16px}
+.top{position:sticky!important;top:0;z-index:20;background:#fff!important;border-bottom:1px solid #e4ddcf!important}
+.top nav{display:flex;gap:22px;overflow-x:auto;margin:0}
+.top nav a{padding:12px 0 10px!important;color:#5b6470!important;border-bottom:2px solid transparent;white-space:nowrap}
+.top nav a.on,.top nav a:hover{color:#1e3a5f!important;border-color:#b5532f!important}
+@media (max-width:640px){.mt{font-size:22px}.mh .moto{margin-left:0;width:100%;font-size:14px}.top nav{gap:16px}.top nav a{font-size:14px}}
+
 :root{--bg:#f2ede4;--paper:#f2ede4;--navy:#1e3a5f;--mustard:#e0a930;--terra:#b5532f;--teal:#2f7f7a;--plum:#7a4a78;--panel:#fff}
 body{background:var(--bg)}
-.top,header{background:var(--navy)!important;border-bottom:0!important;color:#fff}
+
 .logo,.hd h1{color:#fff!important}.logo small,.hd small{color:#c9d4e2!important}
-.top nav a{color:#c9d4e2!important}.top nav a.on,.top nav a:hover{color:#fff!important;border-color:var(--mustard)!important}
+
 .moto{color:var(--mustard)!important}
 h1,h2,.sec>h2{color:var(--navy)}
 .card{background:var(--panel)!important;border:1px solid #e4ddcf!important;border-radius:10px!important;padding:14px 18px!important;margin:10px 0}
 .tabs button.on,.tab.on{border-color:var(--terra)!important}
 
-.intro0{background:var(--navy);color:#fff;border-radius:12px;padding:22px 24px;margin-bottom:6px;position:relative;overflow:hidden}
-.intro0 h1{color:#fff}.intro0 p{color:#dbe3ee}
-.intro0:after{content:"";position:absolute;right:-30px;bottom:-40px;width:180px;height:180px;border:28px solid rgba(224,169,48,.35);border-radius:50%}
+.intro0{background:#fbf3dd;color:#22262b;border:1px solid #efe2bf;border-radius:12px;padding:22px 24px;margin-bottom:6px;position:relative;overflow:hidden}
+.intro0 h1{color:#1e3a5f}.intro0 p{color:#3a3f46;position:relative;z-index:1}
+@media (max-width:640px){.intro0:after{display:none}}
+.intro0:after{content:"";position:absolute;right:-30px;bottom:-40px;width:180px;height:180px;border:24px solid rgba(224,169,48,.28);border-radius:50%}
 .intro0 .search{position:relative;z-index:1;border:0}
 .grid{gap:12px}
 .unit{border-left:6px solid var(--c,#1e3a5f)!important}
@@ -338,7 +351,7 @@ h1,h2,.sec>h2{color:var(--navy)}
 .ex{background:#fff;border:1px solid #e4ddcf;border-left:4px solid var(--teal);border-radius:8px;padding:10px 14px;margin:10px 0}
 .lvl{color:var(--terra)}
 ol.q li{background:#fff;border:1px solid #ece6da;border-radius:8px;padding:8px 12px}
-.cont{background:#fff;border-radius:8px;border:1px solid #e4ddcf;border-left:4px solid var(--terra);padding:10px 14px}
+.resume{background:#fff;border-radius:10px;border:1px solid #e4ddcf;border-left:6px solid var(--terra);padding:12px 16px;margin:14px 0}.resume a{font-size:18px;color:var(--navy)}
 .btn.p{background:var(--terra);border-color:var(--terra)}
 .pager a{background:#fff;border:1px solid #e4ddcf;border-radius:8px;padding:8px 12px;text-decoration:none}
 details.card{background:#fbf3dd!important}
@@ -356,8 +369,7 @@ sup{color:var(--acc)}
 </style>
 </head>
 <body>
-<div class="top"><div class="hd"><a class="logo" href="#home">Математик X<small>10-р анги · Т.Пагамдулам багш</small></a>
-<nav><a href="#home" data-n="home">Нүүр</a><a href="#units" data-n="units">Хичээлүүд</a><a href="#review" data-n="review">Давтлага</a><a href="#level" data-n="level">Түвшин</a><a href="#assess" data-n="assess">Сорил</a><a href="#teacher" data-n="teacher">Багшид</a></nav></div></div>
+<header class="mh"><div class="mw"><div><small>Өвөрхангай аймаг дахь Политехник коллеж · Т.Пагамдулам багш</small><a class="mt" href="#home">Математик X · 10-р анги</a></div><div class="moto">54 хичээл · видео · дадлага</div></div></header><div class="top"><div class="mw"><nav><a href="#home" data-n="home">Нүүр</a><a href="#units" data-n="units">Хичээлүүд</a><a href="#review" data-n="review">Давтлага</a><a href="#level" data-n="level">Түвшин</a><a href="#assess" data-n="assess">Сорил</a><a href="#teacher" data-n="teacher">Багшид</a></nav></div></div>
 <main id="app"></main>
 <span id="tchip" hidden></span>
 <div class="dlg" id="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgT">
@@ -1577,7 +1589,7 @@ const done=()=>store.get("m10done",{});
 function nav(id){document.querySelectorAll(".top nav a").forEach(a=>a.classList.toggle("on",a.dataset.n===id))}
 function vHome(){nav("home");const last=store.get("m10last",0);
   app.innerHTML=`<div class="intro0"><h1>10-р ангийн математик</h1><p>Энэ хичээлийн жилийн 54 хичээл. Хичээл бүрт видео, гол томьёо, жишээ, хариутай дадлага, гэрийн даалгавар бий. Хичээлээ тасалсан, ойлгоогүй үлдсэн бол эндээс нөхөөрэй.</p></div>
-  ${last&&TOC[last]?`<div class="cont"><div><span class="mute small">Сүүлд үзсэн хичээл</span><div><a href="#l-${last}"><b>№${last}.</b> ${esc(TOC[last])}</a></div></div></div>`:""}
+  ${last&&TOC[last]?`<div class="resume"><div><span class="mute small">Сүүлд үзсэн хичээл</span><div><a href="#l-${last}"><b>№${last}.</b> ${esc(TOC[last])}</a></div></div></div>`:""}
   <input class="search" id="q" placeholder="Сэдэв хайх (жишээ нь: матриц, тойрог)" autocomplete="off"><div id="res"></div>
   <h2>Өөрийгөө шалгах</h2><div class="card list"><a href="#level"><span class="no">1</span><span>Түвшингээ шалгах — аль сэдвийг нөхөх вэ</span></a><a href="#warm"><span class="no">2</span><span>Өдрийн 5 бодлого</span></a><a href="#review"><span class="no">3</span><span>Давтлага — өмнө үзсэн сэдвүүдээс</span></a><a href="#assess"><span class="no">4</span><span>Сорил, шалгалт</span></a></div>
   <h2>Нэгжүүд</h2><div class="grid">${UNITS.map(unitCard).join("")}</div>`;
