@@ -1,5 +1,5 @@
 /* Математик X — offline service worker */
-const CACHE = "math10-v6";
+const CACHE = "math10-v7";
 const CORE = ["./", "./index.html", "./fonts/nunito-cyrillic-wght-normal.woff2", "./fonts/nunito-cyrillic-ext-wght-normal.woff2", "./fonts/nunito-latin-wght-normal.woff2"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => Promise.all(CORE.map(u => c.add(u).catch(() => {})))).then(() => self.skipWaiting()));
